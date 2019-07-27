@@ -250,15 +250,114 @@ namespace DG.Tweening.Core
         {
             if (DOTween.instance != null) return;
 
-            GameObject go = new GameObject("[DOTween]");
-            DontDestroyOnLoad(go);
-            DOTween.instance = go.AddComponent<DOTweenComponent>();
+            //GameObject go = new GameObject("[DOTween]");
+            //DontDestroyOnLoad(go);
+            //DOTween.instance = go.AddComponent<DOTweenComponent>();
+            DOTween.instance = CreateComponentOnGameObject<DOTweenComponent>("[HE GAME TECH]/[DoTween]", true);
         }
 
         internal static void DestroyInstance()
         {
             if (DOTween.instance != null) Destroy(DOTween.instance.gameObject);
             DOTween.instance = null;
+        }
+
+        internal static K CreateComponentOnGameObject<K>(string path, bool dontDestroy) where K : MonoBehaviour
+        {
+            GameObject obj = FindGameObject(null, path, true, dontDestroy);
+            if (obj == null)
+            {
+                obj = new GameObject("Singleton of " + typeof(K).Name);
+                if (dontDestroy)
+                {
+                    UnityEngine.Object.DontDestroyOnLoad(obj);
+                }
+            }
+
+            return obj.AddComponent<K>();
+        }
+
+        internal static GameObject FindGameObject(GameObject root, string path, bool build, bool dontDestroy)
+        {
+            if (path == null || path.Length == 0)
+            {
+                return null;
+            }
+
+            string[] subPath = path.Split('/');
+            if (subPath == null || subPath.Length == 0)
+            {
+                return null;
+            }
+
+            return FindGameObject(null, subPath, 0, build, dontDestroy);
+        }
+
+        internal static GameObject FindGameObjectOfExist(GameObject root, string path, bool build, bool dontDestroy)
+        {
+            if (path == null || path.Length == 0)
+            {
+                return null;
+            }
+
+            string[] subPath = path.Split('/');
+            if (subPath == null || subPath.Length == 0)
+            {
+                return null;
+            }
+            string[] newSubPath = new string[subPath.Length - 1];
+            for (int i = 0; i < newSubPath.Length; i++)
+            {
+                newSubPath[i] = subPath[i];
+            }
+
+            return FindGameObject(null, newSubPath, 0, build, dontDestroy);
+        }
+
+        internal static GameObject FindGameObject(GameObject root, string[] subPath, int index, bool build, bool dontDestroy)
+        {
+            GameObject client = null;
+
+            if (root == null)
+            {
+                client = GameObject.Find(subPath[index]);
+            }
+            else
+            {
+                var child = root.transform.Find(subPath[index]);
+                if (child != null)
+                {
+                    client = child.gameObject;
+                }
+            }
+
+            if (client == null)
+            {
+                if (build)
+                {
+                    client = new GameObject(subPath[index]);
+                    if (root != null)
+                    {
+                        client.transform.SetParent(root.transform);
+                    }
+                    if (dontDestroy && index == 0)
+                    {
+                        GameObject.DontDestroyOnLoad(client);
+                    }
+                }
+            }
+
+            if (client == null)
+            {
+                return null;
+            }
+
+            if (++index == subPath.Length)
+            {
+                return client;
+            }
+
+            return FindGameObject(client, subPath, index, build, dontDestroy);
         }
     }
 }
