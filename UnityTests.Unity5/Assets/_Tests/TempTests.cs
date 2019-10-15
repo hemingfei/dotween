@@ -12,18 +12,13 @@ using UnityEngine.UI;
 public class TempTests : BrainBase
 {
     public Transform target;
-    
+    Tween t;
+
     IEnumerator Start()
     {
-        yield return new WaitForSeconds(0.8f);
-
-        Sequence s = DOTween.Sequence();
-//        s.Append(target.DOMoveX(2, 1));
-        s.AppendCallback(() => {
-                Debug.Log("Gonna pause here");
-                s.Pause();
-            })
-            .AppendCallback(() => Debug.Log("Will move Y"))
-            .Append(target.DOMoveY(2, 1));
+        target.DOBlendablePunchRotation(new Vector3(120, 120, 120), 1);
+        yield return new WaitForSeconds(0.3f);
+        Debug.Log(target.eulerAngles);
+        target.DOBlendablePunchRotation(new Vector3(200, 200, 200), 1);
     }
 }
