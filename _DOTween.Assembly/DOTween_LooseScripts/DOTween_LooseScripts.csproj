@@ -39,24 +39,24 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="DemiEditor">
-      <HintPath>..\..\..\bin.Global_no_meta\DemiLib\Core\Editor\DemiEditor.dll</HintPath>
+      <HintPath>..\..\UnityTests.Unity5\Assets\Demigiant\DemiLib\Core\Editor\DemiEditor.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="DemiLib">
-      <HintPath>..\..\..\bin.Global_no_meta\DemiLib\Core\DemiLib.dll</HintPath>
+      <HintPath>..\..\UnityTests.Unity5\Assets\Demigiant\DemiLib\Core\DemiLib.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="System" />
     <Reference Include="UnityEditor">
-      <HintPath>..\..\..\Unity_Dll\2018.4.3f1\UnityEditor.dll</HintPath>
+      <HintPath>D:\Program Files\Unity Sorftware\2018.4.6f1\Editor\Data\Managed\UnityEditor.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine">
-      <HintPath>..\..\..\Unity_Dll\2018.4.3f1\UnityEngine.dll</HintPath>
+      <HintPath>D:\Program Files\Unity Sorftware\2018.4.6f1\Editor\Data\Managed\UnityEngine.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.UI">
-      <HintPath>..\..\..\Unity_Dll\2018.4.3f1\UnityEngine.UI.dll</HintPath>
+      <HintPath>D:\Program Files\Unity Sorftware\2018.4.6f1\Editor\Data\UnityExtensions\Unity\GUISystem\UnityEngine.UI.dll</HintPath>
       <Private>False</Private>
     </Reference>
   </ItemGroup>
