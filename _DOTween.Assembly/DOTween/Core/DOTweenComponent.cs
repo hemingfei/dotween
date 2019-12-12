@@ -257,7 +257,7 @@ namespace DG.Tweening.Core
             //GameObject go = new GameObject("[DOTween]");
             //DontDestroyOnLoad(go);
             //DOTween.instance = go.AddComponent<DOTweenComponent>();
-            DOTween.instance = CreateComponentOnGameObject<DOTweenComponent>("[HE GAME TECH]/[DoTween]", true);
+            DOTween.instance = CreateComponentOnGameObject<DOTweenComponent>("[HE GAME TECH]/[Plugins]/[DoTween]", true);
         }
 
         internal static void DestroyInstance()
