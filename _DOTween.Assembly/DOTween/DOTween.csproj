@@ -64,11 +64,7 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="UnityEngine">
-<<<<<<< HEAD
-      <HintPath>..\..\..\..\Git\hegame.unity.framework\hegame\tool\Unity_Dll\2018.4.0f1\UnityEngine.dll</HintPath>
-=======
-      <HintPath>C:\Program Files (x86)\Unity\4.6\Editor\Data\Managed\UnityEngine.dll</HintPath>
->>>>>>> pr/3
+      <HintPath>..\UnityDll\UnityEngine.dll</HintPath>
       <Private>False</Private>
     </Reference>
   </ItemGroup>
