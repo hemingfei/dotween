@@ -190,8 +190,8 @@ namespace DG.Tweening
         }
 
         /// <summary>Restarts the tween from the beginning</summary>
-        /// <param name="includeDelay">If TRUE includes the eventual tween delay, otherwise skips it</param>
-        /// <param name="changeDelayTo">If >= 0 changes the startup delay to this value, otherwise doesn't touch it</param>
+        /// <param name="includeDelay">Ignored in case of Sequences. If TRUE includes the eventual tween delay, otherwise skips it</param>
+        /// <param name="changeDelayTo">Ignored in case of Sequences. If >= 0 changes the startup delay to this value, otherwise doesn't touch it</param>
         public static void Restart(this Tween t, bool includeDelay = true, float changeDelayTo = -1)
         {
             if (t == null) {
@@ -206,7 +206,7 @@ namespace DG.Tweening
         }
 
         /// <summary>Rewinds and pauses the tween</summary>
-        /// <param name="includeDelay">If TRUE includes the eventual tween delay, otherwise skips it</param>
+        /// <param name="includeDelay">Ignored in case of Sequences. If TRUE includes the eventual tween delay, otherwise skips it</param>
         public static void Rewind(this Tween t, bool includeDelay = true)
         {
             if (t == null) {
@@ -574,7 +574,7 @@ namespace DG.Tweening
             if (pathTween == null) {
                 if (Debugger.logPriority > 1) Debugger.LogNonPathTween(t); return Vector3.zero;
             } else if (!pathTween.endValue.isFinalized) {
-                if (Debugger.logPriority > 1) Debugger.LogWarning("The path is not finalized yet"); return Vector3.zero;
+                if (Debugger.logPriority > 1) Debugger.LogWarning("The path is not finalized yet", t); return Vector3.zero;
             }
 
             return pathTween.endValue.GetPoint(pathPercentage, true);
@@ -603,7 +603,7 @@ namespace DG.Tweening
             if (pathTween == null) {
                 if (Debugger.logPriority > 1) Debugger.LogNonPathTween(t); return null;
             } else if (!pathTween.endValue.isFinalized) {
-                if (Debugger.logPriority > 1) Debugger.LogWarning("The path is not finalized yet"); return null;
+                if (Debugger.logPriority > 1) Debugger.LogWarning("The path is not finalized yet", t); return null;
             }
 
             return Path.GetDrawPoints(pathTween.endValue, subdivisionsXSegment);
@@ -629,7 +629,7 @@ namespace DG.Tweening
             if (pathTween == null) {
                 if (Debugger.logPriority > 1) Debugger.LogNonPathTween(t); return -1;
             } else if (!pathTween.endValue.isFinalized) {
-                if (Debugger.logPriority > 1) Debugger.LogWarning("The path is not finalized yet"); return -1;
+                if (Debugger.logPriority > 1) Debugger.LogWarning("The path is not finalized yet", t); return -1;
             }
 
             return pathTween.endValue.length;

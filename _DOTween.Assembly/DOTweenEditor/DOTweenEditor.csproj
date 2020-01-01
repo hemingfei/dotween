@@ -64,11 +64,19 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="UnityEditor">
+<<<<<<< HEAD
       <HintPath>..\..\..\..\Git\hegame.unity.framework\hegame\tool\Unity_Dll\2018.4.0f1\UnityEditor.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine">
       <HintPath>..\..\..\..\Git\hegame.unity.framework\hegame\tool\Unity_Dll\2018.4.3f1\UnityEngine.dll</HintPath>
+=======
+      <HintPath>C:\Program Files (x86)\Unity\4.6\Editor\Data\Managed\UnityEditor.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>C:\Program Files (x86)\Unity\4.6\Editor\Data\Managed\UnityEngine.dll</HintPath>
+>>>>>>> pr/3
       <Private>False</Private>
     </Reference>
   </ItemGroup>

@@ -11,17 +11,13 @@ using UnityEngine.UI;
 
 public class TempTests : BrainBase
 {
-    Tween _tScale, _tMove;
+    public Transform target;
 
-    void Start()
+    IEnumerator Start()
     {
-        _tScale = transform.DOScale(0.5f, 1).SetLoops(999);
-        _tMove = transform.DOMoveX(2, 1).SetLoops(999);
-    }
-
-    void OnDisable()
-    {
-        _tScale.Complete();
-        _tMove.Complete();
+        yield return new WaitForSeconds(1);
+        Sequence s = DOTween.Sequence().Append(target.DOMoveX(2, 1)).SetLoops(-1);
+        yield return new WaitForSeconds(1f);
+        s.Restart(true, 1);
     }
 }
