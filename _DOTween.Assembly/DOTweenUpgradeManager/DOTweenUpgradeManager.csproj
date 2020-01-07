@@ -41,11 +41,11 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="UnityEditor">
-      <HintPath>..\..\..\..\Git\hegame.unity.framework\hegame\tool\Unity_Dll\2018.4.0f1\UnityEditor.dll</HintPath>
+      <HintPath>..\UnityDll\UnityEditor.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine">
-      <HintPath>..\..\..\..\Git\hegame.unity.framework\hegame\tool\Unity_Dll\2018.4.0f1\UnityEngine.dll</HintPath>
+      <HintPath>..\UnityDll\UnityEngine.dll</HintPath>
       <Private>False</Private>
     </Reference>
   </ItemGroup>
