@@ -62,11 +62,11 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="UnityEngine">
-      <HintPath>..\UnityDll\UnityEngine.dll</HintPath>
+      <HintPath>..\..\DLL\UnityEngine.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.UI">
-      <HintPath>..\UnityDll\UnityEngine.UI.dll</HintPath>
+      <HintPath>..\..\DLL\UnityEngine.UI.dll</HintPath>
       <Private>False</Private>
     </Reference>
   </ItemGroup>
