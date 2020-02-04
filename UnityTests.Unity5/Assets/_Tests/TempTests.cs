@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Reflection;
 using DG.Tweening;
 using DG.Tweening.Core;
@@ -8,16 +9,23 @@ using DG.Tweening.Plugins.Options;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using Debug = UnityEngine.Debug;
 
 public class TempTests : BrainBase
 {
-    public Transform target;
+    Stopwatch sw;
+    Tween t;
 
-    IEnumerator Start()
+    void Start()
     {
-        yield return new WaitForSeconds(1);
-        Sequence s = DOTween.Sequence().Append(target.DOMoveX(2, 1)).SetLoops(-1);
-        yield return new WaitForSeconds(1f);
-        s.Restart(true, 1);
+        sw = new Stopwatch();
+        sw.Start();
+        t = DOVirtual.DelayedCall(0.1f, TestDeleteMe).SetLoops(-1);
+    }
+
+    void TestDeleteMe()
+    {
+        Debug.Log("Test " + sw.ElapsedMilliseconds);
+//        t.Kill();
     }
 }
