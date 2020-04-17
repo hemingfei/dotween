@@ -286,7 +286,7 @@ namespace DG.Tweening
             for (int i = 0; i < waypointIndex + 1; i++) wpLength += pathTween.changeValue.wpLengths[i];
             float wpPerc = wpLength / pathTween.changeValue.length;
             // Convert to time taking eventual inverse direction into account
-            bool useInversePosition = t.loopType == LoopType.Yoyo
+            bool useInversePosition = t.loops > 1 && t.loopType == LoopType.Yoyo
                 && (t.position < t.duration ? t.completedLoops % 2 != 0 : t.completedLoops % 2 == 0);
             if (useInversePosition) wpPerc = 1 - wpPerc;
             float to = (t.isComplete ? t.completedLoops - 1 : t.completedLoops) * t.duration + wpPerc * t.duration;
@@ -489,18 +489,19 @@ namespace DG.Tweening
             }
 
             float perc = t.position / t.duration;
-            bool isInverse = t.completedLoops > 0 && t.loopType == LoopType.Yoyo && (!t.isComplete && t.completedLoops % 2 != 0 || t.isComplete && t.completedLoops % 2 == 0);
+            bool isInverse = t.completedLoops > 0 && t.loops > 1 && t.loopType == LoopType.Yoyo
+                             && (!t.isComplete && t.completedLoops % 2 != 0 || t.isComplete && t.completedLoops % 2 == 0);
             return isInverse ? 1 - perc : perc;
         }
 
-        /// <summary>Returns FALSE if this tween has been killed.
+        /// <summary>Returns FALSE if this tween has been killed or is NULL, TRUE otherwise.
         /// <para>BEWARE: if this tween is recyclable it might have been spawned again for another use and thus return TRUE anyway.</para>
         /// When working with recyclable tweens you should take care to know when a tween has been killed and manually set your references to NULL.
         /// If you want to be sure your references are set to NULL when a tween is killed you can use the <code>OnKill</code> callback like this:
         /// <para><code>.OnKill(()=> myTweenReference = null)</code></para></summary>
         public static bool IsActive(this Tween t)
         {
-            return t.active;
+            return t != null && t.active;
         }
 
         /// <summary>Returns TRUE if this tween was reversed and is set to go backwards</summary>
