@@ -14,24 +14,12 @@ using Debug = UnityEngine.Debug;
 
 public class TempTests : BrainBase
 {
-    public Transform target;
+    public RectTransform target;
+    public int loops = -1;
 
-    void Start()
+    IEnumerator Start()
     {
-        var prefab = Instantiate(target, transform);
-        prefab.transform.DOScale(2.0f, 1.0f).SetDelay(2.0f);
-        StartCoroutine(Wait(1.0f, () => Destroy(prefab.gameObject)));
-    }
-
-    IEnumerator Wait(float time, UnityAction callback)
-    {
-        yield return new WaitForSeconds(time);
-        callback();
-    }
-
-    void OnDestroy()
-    {
-        Debug.Log("OnDestroy");
-        target.DOMoveX(2, 1);
+        yield return new WaitForSeconds(1);
+        target.DOLocalMoveX(2, 1);
     }
 }
