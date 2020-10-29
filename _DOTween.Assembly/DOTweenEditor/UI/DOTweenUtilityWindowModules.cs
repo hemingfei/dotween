@@ -25,6 +25,9 @@ namespace DG.DOTweenEditor.UI
         static readonly ModuleInfo _tk2DModule = new ModuleInfo("DOTweenTk2D.cs", "TK2D");
         static readonly ModuleInfo _deAudioModule = new ModuleInfo("DOTweenDeAudio.cs", "DEAUDIO");
         static readonly ModuleInfo _deUnityExtendedModule = new ModuleInfo("DOTweenDeUnityExtended.cs", "DEUNITYEXTENDED");
+        static readonly ModuleInfo _dotweenProModule = new ModuleInfo(null, "DOTWEENPRO");
+        // External assets included in free version
+        static readonly ModuleInfo _epoOutlineModule = new ModuleInfo("Modules/DOTweenModuleEPOOutline.cs", "EPO_DOTWEEN");
 
         // Files that contain multiple module dependencies and which have specific define markers to change
         static readonly string[] _ModuleDependentFiles = new[] {
@@ -49,6 +52,7 @@ namespace DG.DOTweenEditor.UI
                 _ModuleDependentFiles[i] = _ModuleDependentFiles[i].Replace("DOTWEENDIR/", EditorUtils.dotweenDir);
                 _ModuleDependentFiles[i] = _ModuleDependentFiles[i].Replace("DOTWEENPRODIR/", EditorUtils.dotweenProDir);
                 _ModuleDependentFiles[i] = _ModuleDependentFiles[i].Replace("DOTWEENTIMELINEDIR/", EditorUtils.dotweenTimelineDir);
+                _ModuleDependentFiles[i] = _ModuleDependentFiles[i].Replace(EditorUtils.pathSlashToReplace, EditorUtils.pathSlash);
             }
 
             _audioModule.filePath = EditorUtils.dotweenDir + _audioModule.filePath;
@@ -60,6 +64,7 @@ namespace DG.DOTweenEditor.UI
             _tk2DModule.filePath = EditorUtils.dotweenProDir + _tk2DModule.filePath;
             _deAudioModule.filePath = EditorUtils.dotweenProDir + _deAudioModule.filePath;
             _deUnityExtendedModule.filePath = EditorUtils.dotweenProDir + _deUnityExtendedModule.filePath;
+            _epoOutlineModule.filePath = EditorUtils.dotweenDir + _epoOutlineModule.filePath;
         }
 
         #region GUI
@@ -82,21 +87,30 @@ namespace DG.DOTweenEditor.UI
             _physics2DModule.enabled = EditorGUILayout.Toggle("Physics2D", _physics2DModule.enabled);
             _spriteModule.enabled = EditorGUILayout.Toggle("Sprites", _spriteModule.enabled);
             _uiModule.enabled = EditorGUILayout.Toggle("UI", _uiModule.enabled);
-            EditorGUILayout.EndVertical();
-            if (EditorUtils.hasPro) {
+            GUILayout.EndVertical();
+            // External assets modules - free
+            GUILayout.BeginVertical(UnityEngine.GUI.skin.box);
+            GUILayout.Label("External Assets", EditorGUIUtils.boldLabelStyle);
+            EditorGUILayout.HelpBox(
+                "These modules are for external Unity assets." +
+                "\nDO NOT activate them unless you have the relative asset in your project.",
+                MessageType.Warning
+            );
+            GUILayout.BeginVertical(UnityEngine.GUI.skin.box);
+            GUILayout.Label("DOTween Free/Core", EditorGUIUtils.boldLabelStyle);
+            _epoOutlineModule.enabled = EditorGUILayout.Toggle("Easy Performant Outline", _epoOutlineModule.enabled);
+            GUILayout.EndVertical();
+            // Pro modules
+            using (new EditorGUI.DisabledScope(!EditorUtils.hasPro && !EditorUtils.hasDOTweenTimeline)) {
                 GUILayout.BeginVertical(UnityEngine.GUI.skin.box);
-                GUILayout.Label("External Assets (Pro)", EditorGUIUtils.boldLabelStyle);
-                GUILayout.Label(
-                    "<b>IMPORTANT:</b> these modules are for external Unity assets." +
-                    "\n<i>DO NOT activate an external module</i> unless you have the relative asset in your project.",
-                    EditorGUIUtils.wordWrapRichTextLabelStyle
-                );
+                GUILayout.Label("DOTween Pro / DOTween Timeline", EditorGUIUtils.boldLabelStyle);
                 _deAudioModule.enabled = EditorGUILayout.Toggle("DeAudio", _deAudioModule.enabled);
                 _deUnityExtendedModule.enabled = EditorGUILayout.Toggle("DeUnityExtended", _deUnityExtendedModule.enabled);
                 _textMeshProModule.enabled = EditorGUILayout.Toggle("TextMesh Pro", _textMeshProModule.enabled);
                 _tk2DModule.enabled = EditorGUILayout.Toggle("2D Toolkit (legacy)", _tk2DModule.enabled);
-                EditorGUILayout.EndVertical();
+                GUILayout.EndVertical();
             }
+            GUILayout.EndVertical();
 
             GUILayout.Space(2);
             GUILayout.BeginHorizontal();
@@ -148,10 +162,6 @@ namespace DG.DOTweenEditor.UI
             if (src != null) Refresh(src, true);
         }
 
-        #endregion
-
-        #region Methods
-
         public static void Refresh(DOTweenSettings src, bool applySrcSettings = false)
         {
             _src = src;
@@ -168,6 +178,9 @@ namespace DG.DOTweenEditor.UI
             _tk2DModule.enabled = ModuleIsEnabled(_tk2DModule);
             _deAudioModule.enabled = ModuleIsEnabled(_deAudioModule);
             _deUnityExtendedModule.enabled = ModuleIsEnabled(_deUnityExtendedModule);
+            _dotweenProModule.enabled = ModuleIsEnabled(_dotweenProModule);
+            //
+            _epoOutlineModule.enabled = ModuleIsEnabled(_epoOutlineModule);
 
             CheckAutoModuleSettings(applySrcSettings, _audioModule, ref src.modules.audioEnabled);
             CheckAutoModuleSettings(applySrcSettings, _physicsModule, ref src.modules.physicsEnabled);
@@ -179,10 +192,20 @@ namespace DG.DOTweenEditor.UI
             CheckAutoModuleSettings(applySrcSettings, _tk2DModule, ref src.modules.tk2DEnabled);
             CheckAutoModuleSettings(applySrcSettings, _deAudioModule, ref src.modules.deAudioEnabled);
             CheckAutoModuleSettings(applySrcSettings, _deUnityExtendedModule, ref src.modules.deUnityExtendedEnabled);
+            //
+            CheckAutoModuleSettings(applySrcSettings, _epoOutlineModule, ref src.modules.epoOutlineEnabled);
+            // Not dependent by DOTween Preferences but by simple presence of other assets
+            bool proEnabled = EditorUtils.hasPro;
+            CheckAutoModuleSettings(applySrcSettings, _dotweenProModule, ref proEnabled);
+
             AssetDatabase.StopAssetEditing();
 
             EditorUtility.SetDirty(_src);
         }
+
+        #endregion
+
+        #region Methods
 
         static void Apply()
         {
@@ -197,17 +220,21 @@ namespace DG.DOTweenEditor.UI
             bool tk2DToggled = false;
             bool deAudioToggled = false;
             bool deUnityExtendedToggled = false;
-            if (EditorUtils.hasPro) {
+            if (EditorUtils.hasPro || EditorUtils.hasDOTweenTimeline) {
                 textMeshProToggled = ToggleModule(_textMeshProModule, ref _src.modules.textMeshProEnabled);
                 tk2DToggled = ToggleModule(_tk2DModule, ref _src.modules.tk2DEnabled);
                 deAudioToggled = ToggleModule(_deAudioModule, ref _src.modules.deAudioEnabled);
                 deUnityExtendedToggled = ToggleModule(_deUnityExtendedModule, ref _src.modules.deUnityExtendedEnabled);
             }
+
+            bool epoOutlineToggled = ToggleModule(_epoOutlineModule, ref _src.modules.epoOutlineEnabled);
+
             AssetDatabase.StopAssetEditing();
             EditorUtility.SetDirty(_src);
 
             bool anyToggled = audioToggled || physicsToggled || physics2DToggled || spriteToggled || uiToggled
-                              || textMeshProToggled || tk2DToggled || deAudioToggled || deUnityExtendedToggled;
+                              || textMeshProToggled || tk2DToggled || deAudioToggled || deUnityExtendedToggled
+                              || epoOutlineToggled;
             if (anyToggled) {
                 StringBuilder strb = new StringBuilder();
                 strb.Append("<b>DOTween module files modified ► </b>");
@@ -220,6 +247,7 @@ namespace DG.DOTweenEditor.UI
                 if (tk2DToggled) Apply_AppendLog(strb, _src.modules.tk2DEnabled, "2D Toolkit");
                 if (deAudioToggled) Apply_AppendLog(strb, _src.modules.deAudioEnabled, "DeAudio");
                 if (deUnityExtendedToggled) Apply_AppendLog(strb, _src.modules.deUnityExtendedEnabled, "DeUnityExtended");
+                if (epoOutlineToggled) Apply_AppendLog(strb, _src.modules.epoOutlineEnabled, "Easy Performant Outline");
                 // Remove last divider
                 strb.Remove(strb.Length - 3, 3);
                 Debug.Log(strb.ToString());
@@ -235,27 +263,53 @@ namespace DG.DOTweenEditor.UI
 
         static bool ModuleIsEnabled(ModuleInfo m)
         {
-            if (!File.Exists(m.filePath)) return false;
-
-            using (StreamReader sr = new StreamReader(m.filePath)) {
-                string line = sr.ReadLine();
-                while (line != null) {
-                    if (line.EndsWith(ModuleMarkerId) && line.StartsWith("#if")) return line.Contains("true");
-                    line = sr.ReadLine();
+            bool result = false;
+            bool hasMainFile = !string.IsNullOrEmpty(m.filePath) && File.Exists(m.filePath);
+            if (hasMainFile) {
+                ModuleIsEnabled_Retrieve(m.filePath, ref result, ModuleMarkerId);
+                return result;
+            } else {
+                // Main module file doesn't exist: look in dependent files to find the first specific marker line
+                for (int i = 0; i < _ModuleDependentFiles.Length; ++i) {
+                    if (!File.Exists(_ModuleDependentFiles[i])) continue;
+                    if (ModuleIsEnabled_Retrieve(_ModuleDependentFiles[i], ref result, string.Format("// {0}_MARKER", m.id))) break;
                 }
             }
-            return true;
+            return result;
+        }
+        // Returns TRUE if a module-relative line was found
+        static bool ModuleIsEnabled_Retrieve(string filePath, ref bool isEnabled, string marker)
+        {
+            using (StreamReader sr = new StreamReader(filePath)) {
+                string line;
+                while ((line = sr.ReadLine()) != null) {
+                    if (line.EndsWith(marker) && line.StartsWith("#if")) {
+                        isEnabled = line.Contains("true");
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
         static void CheckAutoModuleSettings(bool applySettings, ModuleInfo m, ref bool srcModuleEnabled)
         {
+            bool moduleSettingsToggled = false;
             if (m.enabled != srcModuleEnabled) {
                 if (applySettings) {
                     m.enabled = srcModuleEnabled;
-                    ToggleModule(m, ref srcModuleEnabled);
+                    moduleSettingsToggled = ToggleModule(m, ref srcModuleEnabled);
                 } else {
                     srcModuleEnabled = m.enabled;
                     EditorUtility.SetDirty(_src);
+                }
+            }
+            if (applySettings && !moduleSettingsToggled) {
+                // If we were applying modifications but nothing changed in the main module file,
+                // check the modules dependent files anyway
+                string marker = "// " + m.id + "_MARKER";
+                for (int i = 0; i < _ModuleDependentFiles.Length; ++i) {
+                    ToggleModuleInDependentFile(_ModuleDependentFiles[i], m.enabled, marker);
                 }
             }
         }
@@ -263,9 +317,6 @@ namespace DG.DOTweenEditor.UI
         // Returns TRUE if files were actually modified
         static bool ToggleModule(ModuleInfo m, ref bool srcSetting)
         {
-//            if (!File.Exists(m.filePath)) return false;
-//            if (ModuleIsEnabled(m) == m.enabled) return; // Already set
-
             srcSetting = m.enabled;
             bool modifiedFiles = false;
 

@@ -22,6 +22,7 @@ using DOColor = UnityEngine.Color;
 using System.Collections.Generic;
 using DG.Tweening.Core;
 using DG.Tweening.Core.Enums;
+using DG.Tweening.Plugins;
 using DG.Tweening.Plugins.Core;
 using DG.Tweening.Plugins.Options;
 using UnityEngine;
@@ -34,7 +35,7 @@ namespace DG.Tweening
     public class DOTween
     {
         /// <summary>DOTween's version</summary>
-        public static readonly string Version = "1.2.400"; // Last version before modules: 1.1.755
+        public static readonly string Version = "1.2.565"; // Last version before modules: 1.1.755
 
         ///////////////////////////////////////////////
         // Options ////////////////////////////////////
@@ -43,7 +44,9 @@ namespace DG.Tweening
         /// (like targets becoming null while a tween is playing).
         /// <para>Default: TRUE</para></summary>
         public static bool useSafeMode = true;
-        /// <summary>Behaviour in case a tween nested inside a Sequence fails (caught by safe mode).
+        /// <summary>Log type when safe mode reports capturing an error and preventing it</summary>
+        public static SafeModeLogBehaviour safeModeLogBehaviour = SafeModeLogBehaviour.Warning;
+        /// <summary>Behaviour in case a tween nested inside a Sequence fails (and is caught by safe mode).
         /// <para>Default: NestedTweenFailureBehaviour.TryToPreserveSequence</para></summary>
         public static NestedTweenFailureBehaviour nestedTweenFailureBehaviour = NestedTweenFailureBehaviour.TryToPreserveSequence;
         /// <summary>If TRUE you will get a DOTween report when exiting play mode (only in the Editor).
@@ -91,7 +94,7 @@ namespace DG.Tweening
             get { return debugMode && useSafeMode && _fooDebugStoreTargetId; }
             set { _fooDebugStoreTargetId = value; }
         }
-        static bool _fooDebugStoreTargetId = false;
+        static bool _fooDebugStoreTargetId = true;
 
         ///////////////////////////////////////////////
         // Default options for Tweens /////////////////
@@ -127,11 +130,25 @@ namespace DG.Tweening
         /// <summary>Used internally. Assigned/removed by DOTweenComponent.Create/DestroyInstance</summary>
         public static DOTweenComponent instance;
 
+        // Set by DOTweenComponent when the application is quitting.
+        // Resets isQuitting if the frame count when it was set to TRUE changed (in order to work with no-domain-reload quick enter playmode)
+        internal static bool isQuitting {
+            get {
+                if (!_foo_isQuitting) return false;
+                if (Time.frameCount > 0 && _isQuittingFrame != Time.frameCount) {
+                    _foo_isQuitting = false;
+                    return false;
+                }
+                return true;
+            }
+            set { _foo_isQuitting = value; if (value)_isQuittingFrame = Time.frameCount; }
+        }
+        static bool _foo_isQuitting;
         internal static int maxActiveTweenersReached, maxActiveSequencesReached; // Controlled by DOTweenInspector if showUnityEditorReport is active
         internal static SafeModeReport safeModeReport; // Used to store how many safe mode errors are captured in the editor
         internal static readonly List<TweenCallback> GizmosDelegates = new List<TweenCallback>(); // Can be used by other classes to call internal gizmo draw methods
         internal static bool initialized; // Can be set to false by DOTweenComponent OnDestroy
-        internal static bool isQuitting; // Set by DOTweenComponent when the application is quitting
+        static int _isQuittingFrame = -1; // Frame when isQuitting was set. Sets isQuitting to false after this frame (so no-domain-reload playmode can work)
 
         #region Public Methods
 
@@ -190,6 +207,7 @@ namespace DG.Tweening
                 if (useSafeMode == null) DOTween.useSafeMode = settings.useSafeMode;
                 if (logBehaviour == null) DOTween.logBehaviour = settings.logBehaviour;
                 if (recycleAllByDefault == null) DOTween.defaultRecyclable = settings.defaultRecyclable;
+                DOTween.safeModeLogBehaviour = settings.safeModeOptions.logBehaviour;
                 DOTween.nestedTweenFailureBehaviour = settings.safeModeOptions.nestedTweenFailureBehaviour;
                 DOTween.timeScale = settings.timeScale;
                 DOTween.useSmoothDeltaTime = settings.useSmoothDeltaTime;
@@ -252,12 +270,16 @@ namespace DG.Tweening
 
             initialized = false;
             useSafeMode = false;
+            safeModeLogBehaviour = SafeModeLogBehaviour.Warning;
             nestedTweenFailureBehaviour = NestedTweenFailureBehaviour.TryToPreserveSequence;
             showUnityEditorReport = false;
             drawGizmos = true;
             timeScale = 1;
             useSmoothDeltaTime = false;
+            maxSmoothUnscaledTime = 0.15f;
+            rewindCallbackMode = RewindCallbackMode.FireIfPositionChanged;
             logBehaviour = LogBehaviour.ErrorsOnly;
+            onWillLog = null;
             defaultEaseType = Ease.OutQuad;
             defaultEaseOvershootOrAmplitude = 1.70158f;
             defaultEasePeriod = 0;
@@ -268,6 +290,7 @@ namespace DG.Tweening
             defaultAutoKill = true;
             defaultRecyclable = false;
             maxActiveTweenersReached = maxActiveSequencesReached = 0;
+            GizmosDelegates.Clear();
 
             DOTweenComponent.DestroyInstance();
         }
@@ -603,7 +626,7 @@ namespace DG.Tweening
                     if (i > 0) ang = ang - 180 + UnityEngine.Random.Range(-randomness, randomness);
                     if (vectorBased) {
                         Quaternion rndQuaternion = Quaternion.AngleAxis(UnityEngine.Random.Range(-randomness, randomness), Vector3.up);
-                        Vector3 to = rndQuaternion * Utils.Vector3FromAngle(ang, shakeMagnitude);
+                        Vector3 to = rndQuaternion * DOTweenUtils.Vector3FromAngle(ang, shakeMagnitude);
                         to.x = Vector3.ClampMagnitude(to, strength.x).x;
                         to.y = Vector3.ClampMagnitude(to, strength.y).y;
                         to.z = Vector3.ClampMagnitude(to, strength.z).z;
@@ -612,10 +635,10 @@ namespace DG.Tweening
                         strength = Vector3.ClampMagnitude(strength, shakeMagnitude);
                     } else {
                         if (ignoreZAxis) {
-                            tos[i] = Utils.Vector3FromAngle(ang, shakeMagnitude);
+                            tos[i] = DOTweenUtils.Vector3FromAngle(ang, shakeMagnitude);
                         } else {
                             Quaternion rndQuaternion = Quaternion.AngleAxis(UnityEngine.Random.Range(-randomness, randomness), Vector3.up);
-                            tos[i] = rndQuaternion * Utils.Vector3FromAngle(ang, shakeMagnitude);
+                            tos[i] = rndQuaternion * DOTweenUtils.Vector3FromAngle(ang, shakeMagnitude);
                         }
                         if (fadeOut) shakeMagnitude -= decayXTween;
                     }
@@ -671,7 +694,10 @@ namespace DG.Tweening
         #region Tween SEQUENCE
 
         /// <summary>
-        /// Returns a new <see cref="Sequence"/> to be used for tween groups
+        /// Returns a new <see cref="DG.Tweening.Sequence"/> to be used for tween groups.<para/>
+        /// Mind that Sequences don't have a target applied automatically like Tweener creation shortcuts,
+        /// so if you want to be able to kill this Sequence when calling DOTween.Kill(target) you'll have to add
+        /// the target manually; you can do that directly by using the <see cref="Sequence(object)"/> overload instead of this one
         /// </summary>
         public static Sequence Sequence()
         {
@@ -680,6 +706,16 @@ namespace DG.Tweening
             Tweening.Sequence.Setup(sequence);
             return sequence;
         }
+        /// <summary>
+        /// Returns a new <see cref="DG.Tweening.Sequence"/> to be used for tween groups, and allows to set a target
+        /// (because Sequences don't have their target set automatically like Tweener creation shortcuts).
+        /// That way killing/controlling tweens by target will apply to this Sequence too.
+        /// </summary>
+        /// <param name="target">The target of the Sequence. Relevant only for static target-based methods like DOTween.Kill(target),
+        /// useless otherwise</param>
+        public static Sequence Sequence(object target)
+        { return DOTween.Sequence().SetTarget(target); }
+
         #endregion
 
         /////////////////////////////////////////////////////////////////////
@@ -714,6 +750,11 @@ namespace DG.Tweening
         {
             if (targetOrId == null) return 0;
             return TweenManager.FilteredOperation(OperationType.Complete, FilterType.TargetOrId, targetOrId, true, 0);
+        }
+        internal static int CompleteAndReturnKilledTot(object target, object id)
+        {
+            if (target == null || id == null) return 0;
+            return TweenManager.FilteredOperation(OperationType.Complete, FilterType.TargetAndId, id, true, 0, target);
         }
         internal static int CompleteAndReturnKilledTotExceptFor(params object[] excludeTargetsOrIds)
         {
@@ -775,6 +816,14 @@ namespace DG.Tweening
             if (targetOrId == null) return 0;
             int tot = complete ? CompleteAndReturnKilledTot(targetOrId) : 0;
             return tot + TweenManager.FilteredOperation(OperationType.Despawn, FilterType.TargetOrId, targetOrId, false, 0);
+        }
+        /// <summary>Kills all tweens with the given target and the given ID, and returns the number of actual tweens killed</summary>
+        /// <param name="complete">If TRUE completes the tweens before killing them</param>
+        public static int Kill(object target, object id, bool complete = false)
+        {
+            if (target == null || id == null) return 0;
+            int tot = complete ? CompleteAndReturnKilledTot(target, id) : 0;
+            return tot + TweenManager.FilteredOperation(OperationType.Despawn, FilterType.TargetAndId, id, false, 0, target);
         }
 
         /// <summary>Pauses all tweens and returns the number of actual tweens paused</summary>

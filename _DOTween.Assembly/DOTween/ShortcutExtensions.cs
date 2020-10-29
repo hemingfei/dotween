@@ -663,17 +663,32 @@ namespace DG.Tweening
             return t;
         }
 
-        /// <summary>Tweens a Transform's rotation so that it will look towards the given position.
+        /// <summary>Tweens a Transform's rotation so that it will look towards the given world position.
         /// Also stores the transform as the tween's target so it can be used for filtered operations</summary>
         /// <param name="towards">The position to look at</param><param name="duration">The duration of the tween</param>
         /// <param name="axisConstraint">Eventual axis constraint for the rotation</param>
         /// <param name="up">The vector that defines in which direction up is (default: Vector3.up)</param>
         public static Tweener DOLookAt(this Transform target, Vector3 towards, float duration, AxisConstraint axisConstraint = AxisConstraint.None, Vector3? up = null)
+        { return LookAt(target, towards, duration, axisConstraint, up, false); }
+        /// <summary><code>EXPERIMENTAL</code> Tweens a Transform's rotation so that it will look towards the given world position,
+        /// while also updating the lookAt position every frame
+        /// (contrary to <see cref="DOLookAt"/> which calculates the lookAt rotation only once, when the tween starts).
+        /// Also stores the transform as the tween's target so it can be used for filtered operations</summary>
+        /// <param name="towards">The position to look at</param><param name="duration">The duration of the tween</param>
+        /// <param name="axisConstraint">Eventual axis constraint for the rotation</param>
+        /// <param name="up">The vector that defines in which direction up is (default: Vector3.up)</param>
+        public static Tweener DODynamicLookAt(this Transform target, Vector3 towards, float duration, AxisConstraint axisConstraint = AxisConstraint.None, Vector3? up = null)
+        { return LookAt(target, towards, duration, axisConstraint, up, true); }
+        static Tweener LookAt(this Transform target, Vector3 towards, float duration, AxisConstraint axisConstraint, Vector3? up, bool dynamic)
         {
             TweenerCore<DOQuaternion, DOVector3, QuaternionOptions> t = DOTween.To(() => target.rotation, x => target.rotation = x, towards, duration)
                 .SetTarget(target).SetSpecialStartupMode(SpecialStartupMode.SetLookAt);
             t.plugOptions.axisConstraint = axisConstraint;
             t.plugOptions.up = (up == null) ? Vector3.up : (Vector3)up;
+            if (dynamic) {
+                t.plugOptions.dynamicLookAt = true;
+                t.plugOptions.dynamicLookAtWorldPosition = towards;
+            } else t.plugOptions.dynamicLookAt = false;
             return t;
         }
 
@@ -843,17 +858,17 @@ namespace DG.Tweening
         public static Sequence DOJump(this Transform target, Vector3 endValue, float jumpPower, int numJumps, float duration, bool snapping = false)
         {
             if (numJumps < 1) numJumps = 1;
-            float startPosY = 0;
+            float startPosY = target.position.y; // Temporary fix for OnStart not being called when using Goto instead of GotoWithCallbacks
             float offsetY = -1;
             bool offsetYSet = false;
 
-            // Separate Y Tween so we can elaborate elapsedPercentage on that insted of on the Sequence
+            // Separate Y Tween so we can elaborate elapsedPercentage on that instead of on the Sequence
             // (in case users add a delay or other elements to the Sequence)
             Sequence s = DOTween.Sequence();
             Tween yTween = DOTween.To(() => target.position, x => target.position = x, new Vector3(0, jumpPower, 0), duration / (numJumps * 2))
                 .SetOptions(AxisConstraint.Y, snapping).SetEase(Ease.OutQuad).SetRelative()
                 .SetLoops(numJumps * 2, LoopType.Yoyo)
-                .OnStart(()=> startPosY = target.position.y);
+                .OnStart(()=> startPosY = target.position.y); // FIXME not called if you only use Goto (and not GotoWithCallbacks)
             s.Append(DOTween.To(() => target.position, x => target.position = x, new Vector3(endValue.x, 0, 0), duration)
                     .SetOptions(AxisConstraint.X, snapping).SetEase(Ease.Linear)
                 ).Join(DOTween.To(() => target.position, x => target.position = x, new Vector3(0, 0, endValue.z), duration)
@@ -871,6 +886,7 @@ namespace DG.Tweening
             });
             return s;
 
+            // Old incorrect method
 //            Sequence s = DOTween.Sequence();
 //            s.Append(DOTween.To(() => target.position, x => target.position = x, new Vector3(endValue.x, 0, 0), duration)
 //                    .SetOptions(AxisConstraint.X, snapping).SetEase(Ease.Linear)
@@ -903,35 +919,65 @@ namespace DG.Tweening
         public static Sequence DOLocalJump(this Transform target, Vector3 endValue, float jumpPower, int numJumps, float duration, bool snapping = false)
         {
             if (numJumps < 1) numJumps = 1;
-            float startPosY = target.localPosition.y;
+            float startPosY = target.localPosition.y; // Temporary fix for OnStart not being called when using Goto instead of GotoWithCallbacks
             float offsetY = -1;
             bool offsetYSet = false;
+
+            // Separate Y Tween so we can elaborate elapsedPercentage on that instead of on the Sequence
+            // (in case users add a delay or other elements to the Sequence)
             Sequence s = DOTween.Sequence();
+            Tween yTween = DOTween.To(() => target.localPosition, x => target.localPosition = x, new Vector3(0, jumpPower, 0), duration / (numJumps * 2))
+                .SetOptions(AxisConstraint.Y, snapping).SetEase(Ease.OutQuad).SetRelative()
+                .SetLoops(numJumps * 2, LoopType.Yoyo)
+                .OnStart(()=> startPosY = target.localPosition.y); // FIXME not called if you only use Goto (and not GotoWithCallbacks)
             s.Append(DOTween.To(() => target.localPosition, x => target.localPosition = x, new Vector3(endValue.x, 0, 0), duration)
                     .SetOptions(AxisConstraint.X, snapping).SetEase(Ease.Linear)
                 ).Join(DOTween.To(() => target.localPosition, x => target.localPosition = x, new Vector3(0, 0, endValue.z), duration)
                     .SetOptions(AxisConstraint.Z, snapping).SetEase(Ease.Linear)
-                ).Join(DOTween.To(() => target.localPosition, x => target.localPosition = x, new Vector3(0, jumpPower, 0), duration / (numJumps * 2))
-                    .SetOptions(AxisConstraint.Y, snapping).SetEase(Ease.OutQuad).SetRelative()
-                    .SetLoops(numJumps * 2, LoopType.Yoyo)
-                ).SetTarget(target).SetEase(DOTween.defaultEaseType)
-                .OnUpdate(() => {
-                    if (!offsetYSet) {
-                        offsetYSet = false;
-                        offsetY = s.isRelative ? endValue.y : endValue.y - startPosY;
-                    }
-                    Vector3 pos = target.localPosition;
-                    pos.y += DOVirtual.EasedValue(0, offsetY, s.ElapsedDirectionalPercentage(), Ease.OutQuad);
-                    target.localPosition = pos;
-                });
+                ).Join(yTween)
+                .SetTarget(target).SetEase(DOTween.defaultEaseType);
+            yTween.OnUpdate(() => {
+                if (!offsetYSet) {
+                    offsetYSet = true;
+                    offsetY = s.isRelative ? endValue.y : endValue.y - startPosY;
+                }
+                Vector3 pos = target.localPosition;
+                pos.y += DOVirtual.EasedValue(0, offsetY, yTween.ElapsedPercentage(), Ease.OutQuad);
+                target.localPosition = pos;
+            });
             return s;
+
+            // Old incorrect method
+            // if (numJumps < 1) numJumps = 1;
+            // float startPosY = target.localPosition.y;
+            // float offsetY = -1;
+            // bool offsetYSet = false;
+            // Sequence s = DOTween.Sequence();
+            // s.Append(DOTween.To(() => target.localPosition, x => target.localPosition = x, new Vector3(endValue.x, 0, 0), duration)
+            //         .SetOptions(AxisConstraint.X, snapping).SetEase(Ease.Linear)
+            //     ).Join(DOTween.To(() => target.localPosition, x => target.localPosition = x, new Vector3(0, 0, endValue.z), duration)
+            //         .SetOptions(AxisConstraint.Z, snapping).SetEase(Ease.Linear)
+            //     ).Join(DOTween.To(() => target.localPosition, x => target.localPosition = x, new Vector3(0, jumpPower, 0), duration / (numJumps * 2))
+            //         .SetOptions(AxisConstraint.Y, snapping).SetEase(Ease.OutQuad).SetRelative()
+            //         .SetLoops(numJumps * 2, LoopType.Yoyo)
+            //     ).SetTarget(target).SetEase(DOTween.defaultEaseType)
+            //     .OnUpdate(() => {
+            //         if (!offsetYSet) {
+            //             offsetYSet = false;
+            //             offsetY = s.isRelative ? endValue.y : endValue.y - startPosY;
+            //         }
+            //         Vector3 pos = target.localPosition;
+            //         pos.y += DOVirtual.EasedValue(0, offsetY, s.ElapsedDirectionalPercentage(), Ease.OutQuad);
+            //         target.localPosition = pos;
+            //     });
+            // return s;
         }
 
         /// <summary>Tweens a Transform's position through the given path waypoints, using the chosen path algorithm.
         /// Also stores the transform as the tween's target so it can be used for filtered operations</summary>
         /// <param name="path">The waypoints to go through</param>
         /// <param name="duration">The duration of the tween</param>
-        /// <param name="pathType">The type of path: Linear (straight path) or CatmullRom (curved CatmullRom path)</param>
+        /// <param name="pathType">The type of path: Linear (straight path), CatmullRom (curved CatmullRom path) or CubicBezier (curved with control points)</param>
         /// <param name="pathMode">The path mode: 3D, side-scroller 2D, top-down 2D</param>
         /// <param name="resolution">The resolution of the path (useless in case of Linear paths): higher resolutions make for more detailed curved paths but are more expensive.
         /// Defaults to 10, but a value of 5 is usually enough if you don't have dramatic long curves between waypoints</param>
@@ -952,7 +998,7 @@ namespace DG.Tweening
         /// Also stores the transform as the tween's target so it can be used for filtered operations</summary>
         /// <param name="path">The waypoint to go through</param>
         /// <param name="duration">The duration of the tween</param>
-        /// <param name="pathType">The type of path: Linear (straight path) or CatmullRom (curved CatmullRom path)</param>
+        /// <param name="pathType">The type of path: Linear (straight path), CatmullRom (curved CatmullRom path) or CubicBezier (curved with control points)</param>
         /// <param name="pathMode">The path mode: 3D, side-scroller 2D, top-down 2D</param>
         /// <param name="resolution">The resolution of the path: higher resolutions make for more detailed curved paths but are more expensive.
         /// Defaults to 10, but a value of 5 is usually enough if you don't have dramatic long curves between waypoints</param>

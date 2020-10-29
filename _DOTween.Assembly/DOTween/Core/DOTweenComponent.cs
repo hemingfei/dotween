@@ -48,7 +48,7 @@ namespace DG.Tweening.Core
             _unscaledTime = Time.realtimeSinceStartup;
 
             // Initialize DOTweenModuleUtils via Reflection
-            Type modules = Utils.GetLooseScriptType("DG.Tweening.DOTweenModuleUtils");
+            Type modules = DOTweenUtils.GetLooseScriptType("DG.Tweening.DOTweenModuleUtils");
             if (modules == null) {
                 Debugger.LogError("Couldn't load Modules system");
                 return;
@@ -179,14 +179,8 @@ namespace DG.Tweening.Core
         void OnApplicationQuit()
         {
             _isQuitting = true;
+            DOTween.isQuitting = true;
         }
-
-        // Commented this out because it interferes with Unity 2019.3 "no domain reload" experimental playmode
-        // (now I clear DOTween completely when the DOTween component is destroyed which allows this to be commented out)
-//        void OnApplicationQuit()
-//        {
-//            DOTween.isQuitting = true;
-//        }
 
         #endregion
 

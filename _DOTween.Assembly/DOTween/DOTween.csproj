@@ -84,6 +84,7 @@
     <Compile Include="Core\Enums\FilterType.cs" />
     <Compile Include="Core\Enums\NestedTweenFailureBehaviour.cs" />
     <Compile Include="Core\Enums\OperationType.cs" />
+    <Compile Include="Core\Enums\SafeModeLogBehaviour.cs" />
     <Compile Include="Core\Enums\SpecialStartupMode.cs" />
     <Compile Include="Core\Enums\UpdateNotice.cs" />
     <Compile Include="Core\Enums\UpdateMode.cs" />
@@ -98,8 +99,9 @@
     <Compile Include="Core\Surrogates\Vector4Wrapper.cs" />
     <Compile Include="Core\TweenLink.cs" />
     <Compile Include="Core\TweenManager.cs" />
-    <Compile Include="Core\Utils.cs" />
+    <Compile Include="Core\DOTweenUtils.cs" />
     <Compile Include="CustomPlugins\PureQuaternionPlugin.cs" />
+    <Compile Include="DOCurve.cs" />
     <Compile Include="DOTween.cs" />
     <Compile Include="DOVirtual.cs" />
     <Compile Include="Ease.cs" />
@@ -108,6 +110,7 @@
     <Compile Include="LinkBehaviour.cs" />
     <Compile Include="PathMode.cs" />
     <Compile Include="PathType.cs" />
+    <Compile Include="Plugins\CirclePlugin.cs" />
     <Compile Include="Plugins\Color2Plugin.cs" />
     <Compile Include="Plugins\ColorWrapperPlugin.cs" />
     <Compile Include="Plugins\Core\PathCore\CubicBezierDecoder.cs" />

@@ -23,7 +23,7 @@ namespace DG.Tweening.Plugins
     public class StringPlugin : ABSTweenPlugin<string, string, StringOptions>
     {
         static readonly StringBuilder _Buffer = new StringBuilder();
-        static readonly List<Char> _OpenedTags = new List<char>(); // Opened tags that need to be closed at the end, stored by first character required in closing tag
+        static readonly List<char> _OpenedTags = new List<char>(); // Opened tags that need to be closed at the end, stored by first character required in closing tag
 
         public override void SetFrom(TweenerCore<string, string, StringOptions> t, bool isRelative)
         {
@@ -34,6 +34,7 @@ namespace DG.Tweening.Plugins
         }
         public override void SetFrom(TweenerCore<string, string, StringOptions> t, string fromValue, bool setImmediately, bool isRelative)
         {
+            if (fromValue == null) fromValue = "";
             if (isRelative) {
                 string currVal = t.getter();
                 fromValue += currVal;
@@ -44,7 +45,7 @@ namespace DG.Tweening.Plugins
 
         public override void Reset(TweenerCore<string, string, StringOptions> t)
         {
-            t.startValue = t.endValue = t.changeValue = null;
+            t.startValue = t.endValue = t.changeValue = "";
         }
 
         public override string ConvertToStartValue(TweenerCore<string, string, StringOptions> t, string value)
@@ -62,8 +63,8 @@ namespace DG.Tweening.Plugins
             t.changeValue = t.endValue;
 
             // Store no-tags versions of values
-            t.plugOptions.startValueStrippedLength = Regex.Replace(t.startValue, @"<[^>]*>", "").Length;
-            t.plugOptions.changeValueStrippedLength = Regex.Replace(t.changeValue, @"<[^>]*>", "").Length;
+            t.plugOptions.startValueStrippedLength = string.IsNullOrEmpty(t.startValue) ? 0 : Regex.Replace(t.startValue, @"<[^>]*>", "").Length;
+            t.plugOptions.changeValueStrippedLength = string.IsNullOrEmpty(t.changeValue) ? 0 : Regex.Replace(t.changeValue, @"<[^>]*>", "").Length;
         }
 
         public override float GetSpeedBasedDuration(StringOptions options, float unitsXSecond, string changeValue)
@@ -91,7 +92,8 @@ namespace DG.Tweening.Plugins
                 }
             }
 
-            int startValueLen = options.richTextEnabled ? options.startValueStrippedLength : startValue.Length;
+            int startValueLen = options.richTextEnabled ? options.startValueStrippedLength
+                : string.IsNullOrEmpty(startValue) ? 0 : startValue.Length;
             int changeValueLen = options.richTextEnabled ? options.changeValueStrippedLength : changeValue.Length;
             int len = (int)Math.Round(changeValueLen * EaseManager.Evaluate(t.easeType, t.customEase, elapsed, duration, t.easeOvershootOrAmplitude, t.easePeriod));
             if (len > changeValueLen) len = changeValueLen;

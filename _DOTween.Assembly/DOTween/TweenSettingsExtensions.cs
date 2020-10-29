@@ -280,6 +280,28 @@ namespace DG.Tweening
             return t;
         }
 
+        /// <summary>EXPERIMENTAL: inverts this tween, so that it will play from the end to the beginning
+        /// (playing it backwards will actually play it from the beginning to the end). 
+        /// <code>Has no effect</code> if the tween has already started or if it's added to a Sequence</summary>
+        public static T SetInverted<T>(this T t) where T : Tween
+        {
+            if (t == null || !t.active || t.creationLocked) return t;
+
+            t.isInverted = true;
+            return t;
+        }
+        /// <summary>EXPERIMENTAL: inverts this tween, so that it will play from the end to the beginning
+        /// (playing it backwards will actually play it from the beginning to the end). 
+        /// <code>Has no effect</code> if the tween has already started or if it's added to a Sequence</summary>
+        /// <param name="inverted">If TRUE the tween will be inverted, otherwise it won't</param>
+        public static T SetInverted<T>(this T t, bool inverted) where T : Tween
+        {
+            if (t == null || !t.active || t.creationLocked) return t;
+
+            t.isInverted = inverted;
+            return t;
+        }
+
         /// <summary>Sets the <code>onStart</code> callback for the tween, clearing any previous <code>onStart</code> callback that was set.
         /// Called the first time the tween is set in a playing state, after any eventual delay</summary>
         public static T OnStart<T>(this T t, TweenCallback action) where T : Tween
@@ -579,23 +601,27 @@ namespace DG.Tweening
         /// <summary>Changes a TO tween into a FROM tween: sets the current target's position as the tween's endValue
         /// then immediately sends the target to the previously set endValue.</summary>
         public static T From<T>(this T t) where T : Tweener
-        {
-            if (t == null || !t.active || t.creationLocked || !t.isFromAllowed) return t;
-
-            t.isFrom = true;
-            t.SetFrom(false);
-            return t;
-        }
+        { return From(t, true, false); }
         /// <summary>Changes a TO tween into a FROM tween: sets the current target's position as the tween's endValue
         /// then immediately sends the target to the previously set endValue.</summary>
         /// <param name="isRelative">If TRUE the FROM value will be calculated as relative to the current one</param>
         public static T From<T>(this T t, bool isRelative) where T : Tweener
+        { { return From(t, true, isRelative); } }
+        /// <summary>Changes a TO tween into a FROM tween: sets the current value of the target as the endValue,
+        /// and the previously passed endValue as the actual startValue.</summary>
+        /// <param name="setImmediately">If TRUE sets the target to from value immediately, otherwise waits for the tween to start</param>
+        /// <param name="isRelative">If TRUE the FROM value will be calculated as relative to the current one</param>
+        public static T From<T>(this T t, bool setImmediately, bool isRelative) where T : Tweener
         {
             if (t == null || !t.active || t.creationLocked || !t.isFromAllowed) return t;
 
             t.isFrom = true;
-            if (!isRelative) t.SetFrom(false);
-            else t.SetFrom(!t.isBlendable);
+            if (setImmediately) t.SetFrom(isRelative && !t.isBlendable);
+            else {
+                // Just mark the tween as relative (will be reset to FALSE once the From is applied at startup)
+                // and let the startup routine set the From values
+                t.isRelative = isRelative;
+            }
             return t;
         }
 
@@ -603,6 +629,7 @@ namespace DG.Tweening
         /// and eventually sets the tween's target to that value immediately.</summary>
         /// <param name="fromValue">Value to start from</param>
         /// <param name="setImmediately">If TRUE sets the target to from value immediately, otherwise waits for the tween to start</param>
+        /// <param name="isRelative">If TRUE the FROM/TO values will be calculated as relative to the current ones</param>
         public static TweenerCore<T1,T2,TPlugOptions> From<T1,T2,TPlugOptions>(
             this TweenerCore<T1,T2,TPlugOptions> t, T2 fromValue, bool setImmediately = true, bool isRelative = false
         ) where TPlugOptions : struct, IPlugOptions
@@ -620,6 +647,7 @@ namespace DG.Tweening
         /// and eventually sets the tween's target to that value immediately.</summary>
         /// <param name="fromAlphaValue">Alpha value to start from (in case of Fade tweens)</param>
         /// <param name="setImmediately">If TRUE sets the target to from value immediately, otherwise waits for the tween to start</param>
+        /// <param name="isRelative">If TRUE the FROM/TO values will be calculated as relative to the current ones</param>
         public static TweenerCore<DOColor, DOColor, ColorOptions> From(
             this TweenerCore<DOColor, DOColor, ColorOptions> t, float fromAlphaValue, bool setImmediately = true, bool isRelative = false
         ){
@@ -634,6 +662,7 @@ namespace DG.Tweening
         /// and eventually sets the tween's target to that value immediately.</summary>
         /// <param name="fromValue">Value to start from (in case of Vector tweens that act on a single coordinate or scale tweens)</param>
         /// <param name="setImmediately">If TRUE sets the target to from value immediately, otherwise waits for the tween to start</param>
+        /// <param name="isRelative">If TRUE the FROM/TO values will be calculated as relative to the current ones</param>
         public static TweenerCore<DOVector3, DOVector3, VectorOptions> From(
             this TweenerCore<DOVector3, DOVector3, VectorOptions> t, float fromValue, bool setImmediately = true, bool isRelative = false
         ){
@@ -641,6 +670,21 @@ namespace DG.Tweening
 
             t.isFrom = true;
             t.SetFrom(new Vector3(fromValue, fromValue, fromValue), setImmediately, isRelative);
+            return t;
+        }
+
+        /// <summary>Changes a TO tween into a FROM tween: sets the tween's starting value to the given one
+        /// and eventually sets the tween's target to that value immediately.</summary>
+        /// <param name="fromValueDegrees">Value to start from (in case of Vector tweens that act on a single coordinate or scale tweens)</param>
+        /// <param name="setImmediately">If TRUE sets the target to from value immediately, otherwise waits for the tween to start</param>
+        /// <param name="isRelative">If TRUE the FROM/TO values will be calculated as relative to the current ones</param>
+        public static TweenerCore<DOVector2, DOVector2, CircleOptions> From(
+            this TweenerCore<DOVector2, DOVector2, CircleOptions> t, float fromValueDegrees, bool setImmediately = true, bool isRelative = false
+        ){
+            if (t == null || !t.active || t.creationLocked || !t.isFromAllowed) return t;
+
+            t.isFrom = true;
+            t.SetFrom(new Vector2(fromValueDegrees, 0), setImmediately, isRelative);
             return t;
         }
 
@@ -874,6 +918,19 @@ namespace DG.Tweening
             t.plugOptions.snapping = snapping;
             return t;
         }
+        /// <summary>Options for ShapeCircle tweens</summary>
+        /// <param name="relativeCenter">If TRUE the center you set in the DOTween.To method will be considered as relative
+        /// to the starting position of the target</param>
+        /// <param name="snapping">If TRUE the tween will smoothly snap all values to integers</param>
+        public static Tweener SetOptions(this TweenerCore<DOVector2, DOVector2, CircleOptions> t, float endValueDegrees, bool relativeCenter = true, bool snapping = false)
+        {
+            if (t == null || !t.active) return t;
+
+            t.plugOptions.endValueDegrees = endValueDegrees;
+            t.plugOptions.relativeCenter = relativeCenter;
+            t.plugOptions.snapping = snapping;
+            return t;
+        }
 
         #region Path Options
 
@@ -918,14 +975,16 @@ namespace DG.Tweening
         public static TweenerCore<Vector3, Path, PathOptions> SetLookAt(
             this TweenerCore<Vector3, Path, PathOptions> t, Vector3 lookAtPosition, Vector3? forwardDirection = null, Vector3? up = null
         )
-        {
-            if (t == null || !t.active) return t;
-
-            t.plugOptions.orientType = OrientType.LookAtPosition;
-            t.plugOptions.lookAtPosition = lookAtPosition;
-            SetPathForwardDirection(t, forwardDirection, up);
-            return t;
-        }
+        { return SetLookAt(t, OrientType.LookAtPosition, lookAtPosition, null, -1, forwardDirection, up); }
+        /// <summary>Additional LookAt options for Path tweens (created via the <code>DOPath</code> shortcut).
+        /// Orients the target towards the given position with options to keep the Z rotation stable.
+        /// Must be chained directly to the tween creation method or to a <code>SetOptions</code></summary>
+        /// <param name="lookAtPosition">The position to look at</param>
+        /// <param name="stableZRotation">If TRUE doesn't rotate the target along the Z axis</param>
+        public static TweenerCore<Vector3, Path, PathOptions> SetLookAt(
+            this TweenerCore<Vector3, Path, PathOptions> t, Vector3 lookAtPosition, bool stableZRotation
+        )
+        { return SetLookAt(t, OrientType.LookAtPosition, lookAtPosition, null, -1, null, null, stableZRotation); }
         /// <summary>Additional LookAt options for Path tweens (created via the <code>DOPath</code> shortcut).
         /// Orients the target towards another transform.
         /// Must be chained directly to the tween creation method or to a <code>SetOptions</code></summary>
@@ -936,14 +995,16 @@ namespace DG.Tweening
         public static TweenerCore<Vector3, Path, PathOptions> SetLookAt(
             this TweenerCore<Vector3, Path, PathOptions> t, Transform lookAtTransform, Vector3? forwardDirection = null, Vector3? up = null
         )
-        {
-            if (t == null || !t.active) return t;
-
-            t.plugOptions.orientType = OrientType.LookAtTransform;
-            t.plugOptions.lookAtTransform = lookAtTransform;
-            SetPathForwardDirection(t, forwardDirection, up);
-            return t;
-        }
+        { return SetLookAt(t, OrientType.LookAtTransform, Vector3.zero, lookAtTransform, -1, forwardDirection, up); }
+        /// <summary>Additional LookAt options for Path tweens (created via the <code>DOPath</code> shortcut).
+        /// Orients the target towards another transform with options to keep the Z rotation stable.
+        /// Must be chained directly to the tween creation method or to a <code>SetOptions</code></summary>
+        /// <param name="lookAtTransform">The transform to look at</param>
+        /// <param name="stableZRotation">If TRUE doesn't rotate the target along the Z axis</param>
+        public static TweenerCore<Vector3, Path, PathOptions> SetLookAt(
+            this TweenerCore<Vector3, Path, PathOptions> t, Transform lookAtTransform, bool stableZRotation
+        )
+        { return SetLookAt(t, OrientType.LookAtTransform, Vector3.zero, lookAtTransform, -1, null, null, stableZRotation); }
         /// <summary>Additional LookAt options for Path tweens (created via the <code>DOPath</code> shortcut).
         /// Orients the target to the path, with the given lookAhead.
         /// Must be chained directly to the tween creation method or to a <code>SetOptions</code></summary>
@@ -954,12 +1015,39 @@ namespace DG.Tweening
         public static TweenerCore<Vector3, Path, PathOptions> SetLookAt(
             this TweenerCore<Vector3, Path, PathOptions> t, float lookAhead, Vector3? forwardDirection = null, Vector3? up = null
         )
+        { return SetLookAt(t, OrientType.ToPath, Vector3.zero, null, lookAhead, forwardDirection, up); }
+        /// <summary>Additional LookAt options for Path tweens (created via the <code>DOPath</code> shortcut).
+        /// Orients the path with options to keep the Z rotation stable.
+        /// Must be chained directly to the tween creation method or to a <code>SetOptions</code></summary>
+        /// <param name="lookAhead">The percentage of lookAhead to use (0 to 1)</param>
+        /// <param name="stableZRotation">If TRUE doesn't rotate the target along the Z axis</param>
+        public static TweenerCore<Vector3, Path, PathOptions> SetLookAt(
+            this TweenerCore<Vector3, Path, PathOptions> t, float lookAhead, bool stableZRotation
+        )
+        { return SetLookAt(t, OrientType.ToPath, Vector3.zero, null, lookAhead, null, null, stableZRotation); }
+        static TweenerCore<Vector3, Path, PathOptions> SetLookAt(
+            this TweenerCore<Vector3, Path, PathOptions> t,
+            OrientType orientType, Vector3 lookAtPosition, Transform lookAtTransform, float lookAhead,
+            Vector3? forwardDirection = null, Vector3? up = null, bool stableZRotation = false
+        )
         {
             if (t == null || !t.active) return t;
 
-            t.plugOptions.orientType = OrientType.ToPath;
-            if (lookAhead < PathPlugin.MinLookAhead) lookAhead = PathPlugin.MinLookAhead;
-            t.plugOptions.lookAhead = lookAhead;
+            t.plugOptions.orientType = orientType;
+            switch (orientType) {
+            case OrientType.LookAtPosition:
+                t.plugOptions.lookAtPosition = lookAtPosition;
+                break;
+            case OrientType.LookAtTransform:
+                t.plugOptions.lookAtTransform = lookAtTransform;
+                break;
+            case OrientType.ToPath:
+                if (lookAhead < PathPlugin.MinLookAhead) lookAhead = PathPlugin.MinLookAhead;
+                t.plugOptions.lookAhead = lookAhead;
+                break;
+            }
+            t.plugOptions.lookAtPosition = lookAtPosition;
+            t.plugOptions.stableZRotation = stableZRotation;
             SetPathForwardDirection(t, forwardDirection, up);
             return t;
         }

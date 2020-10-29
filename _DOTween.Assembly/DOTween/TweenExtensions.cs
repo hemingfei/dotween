@@ -55,10 +55,15 @@ namespace DG.Tweening
                 if (Debugger.logPriority > 1) Debugger.LogNestedTween(t); return;
             }
 
-//            TweenManager.Complete(t, true, withCallbacks ? UpdateMode.Update : UpdateMode.Goto);
-            UpdateMode updateMode = TweenManager.isUpdateLoop ? UpdateMode.IgnoreOnComplete
-                : withCallbacks ? UpdateMode.Update : UpdateMode.Goto;
-            TweenManager.Complete(t, true, updateMode);
+            // Previously disused in favor of bottom code because otherwise OnComplete was called twice when fired inside am OnUpdate call,
+            // but that created another recent issue where events (OnComplete and any other) weren't called anymore
+            // if called from another tween's internal callbacks.
+            // Reinstated because thanks to other fixes this now works correctly
+            TweenManager.Complete(t, true, withCallbacks ? UpdateMode.Update : UpdateMode.Goto);
+            // See above note for reason why this was commented
+            // UpdateMode updateMode = TweenManager.isUpdateLoop ? UpdateMode.IgnoreOnComplete
+            //     : withCallbacks ? UpdateMode.Update : UpdateMode.Goto;
+            // TweenManager.Complete(t, true, updateMode);
         }
 
         /// <summary>Flips the direction of this tween (backwards if it was going forward or viceversa)</summary>
@@ -94,6 +99,14 @@ namespace DG.Tweening
         /// (if higher than the whole tween duration the tween will simply reach its end)</param>
         /// <param name="andPlay">If TRUE will play the tween after reaching the given position, otherwise it will pause it</param>
         public static void Goto(this Tween t, float to, bool andPlay = false)
+        { DoGoto(t, to, andPlay, false); }
+        /// <summary>Send the tween to the given position in time while also executing any callback between the previous time position and the new one</summary>
+        /// <param name="to">Time position to reach
+        /// (if higher than the whole tween duration the tween will simply reach its end)</param>
+        /// <param name="andPlay">If TRUE will play the tween after reaching the given position, otherwise it will pause it</param>
+        public static void GotoWithCallbacks(this Tween t, float to, bool andPlay = false)
+        { DoGoto(t, to, andPlay, true); }
+        static void DoGoto(Tween t, float to, bool andPlay, bool withCallbacks)
         {
             if (t == null) {
                 if (Debugger.logPriority > 1) Debugger.LogNullTween(t); return;
@@ -105,7 +118,7 @@ namespace DG.Tweening
 
             if (to < 0) to = 0;
             if (!t.startupDone) TweenManager.ForceInit(t); // Initialize the tween if it's not initialized already (required)
-            TweenManager.Goto(t, to, andPlay);
+            TweenManager.Goto(t, to, andPlay, withCallbacks ? UpdateMode.Update : UpdateMode.Goto);
         }
 
         /// <summary>Kills the tween</summary>
@@ -130,6 +143,27 @@ namespace DG.Tweening
                 // Just mark it for killing, so the update loop will take care of it
                 t.active = false;
             } else TweenManager.Despawn(t);
+        }
+
+        /// <summary>
+        /// Forces this tween to update manually, regardless of the <see cref="UpdateType"/> set via SetUpdate.
+        /// Note that the tween will still be subject to normal tween rules, so if for example it's paused this method will do nothing.<para/>
+        /// Also note that if you only want to update this tween instance manually you'll have to set it to <see cref="UpdateType.Manual"/> anyway,
+        /// so that it's not updated automatically.
+        /// </summary>
+        /// <param name="deltaTime">Manual deltaTime</param>
+        /// <param name="unscaledDeltaTime">Unscaled delta time (used with tweens set as timeScaleIndependent)</param>
+        public static void ManualUpdate(this Tween t, float deltaTime, float unscaledDeltaTime)
+        {
+            if (t == null) {
+                if (Debugger.logPriority > 1) Debugger.LogNullTween(t); return;
+            } else if (!t.active) {
+                if (Debugger.logPriority > 1) Debugger.LogInvalidTween(t); return;
+            } else if (t.isSequenced) {
+                if (Debugger.logPriority > 1) Debugger.LogNestedTween(t); return;
+            }
+
+            TweenManager.Update(t, deltaTime, unscaledDeltaTime, true);
         }
 
         /// <summary>Pauses the tween</summary>

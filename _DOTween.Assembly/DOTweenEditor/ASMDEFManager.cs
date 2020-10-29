@@ -18,7 +18,9 @@ namespace DG.DOTweenEditor
         {
             Modules,
             DOTweenPro,
-            DOTweenProEditor
+            DOTweenProEditor,
+            DOTweenTimeline,
+            DOTweenTimelineEditor
         }
 
         enum ChangeType
@@ -31,14 +33,20 @@ namespace DG.DOTweenEditor
         public static bool hasModulesASMDEF { get; private set; }
         public static bool hasProASMDEF { get; private set; }
         public static bool hasProEditorASMDEF { get; private set; }
+        public static bool hasDOTweenTimelineASMDEF { get; private set; }
+        public static bool hasDOTweenTimelineEditorASMDEF { get; private set; }
 
 
         const string _ModulesId = "DOTween.Modules";
         const string _ProId = "DOTweenPro.Scripts";
         const string _ProEditorId = "DOTweenPro.EditorScripts";
+        const string _DOTweenTimelineId = "DOTweenTimeline.Scripts";
+        const string _DOTweenTimelineEditorId = "DOTweenTimeline.EditorScripts";
         const string _ModulesASMDEFFile = _ModulesId + ".asmdef";
         const string _ProASMDEFFile = _ProId + ".asmdef";
         const string _ProEditorASMDEFFile = _ProEditorId + ".asmdef";
+        const string _DOTweenTimelineASMDEFFile = _DOTweenTimelineId + ".asmdef";
+        const string _DOTweenTimelineEditorASMDEFFile = _DOTweenTimelineEditorId + ".asmdef";
 
         const string _RefTextMeshPro = "Unity.TextMeshPro";
 
@@ -49,49 +57,83 @@ namespace DG.DOTweenEditor
 
         #region Public Methods
 
+        // Also called via Reflection by Autorun
+        public static void ApplyASMDEFSettings()
+        {
+            Refresh();
+            DOTweenSettings src = DOTweenUtilityWindow.GetDOTweenSettings();
+            if (src != null) {
+                if (src.createASMDEF) CreateAllASMDEF();
+                else RemoveAllASMDEF();
+            }
+            RefreshExistingASMDEFFiles();
+        }
+
         public static void Refresh()
         {
             hasModulesASMDEF = File.Exists(EditorUtils.dotweenModulesDir + _ModulesASMDEFFile);
             hasProASMDEF = File.Exists(EditorUtils.dotweenProDir + _ProASMDEFFile);
             hasProEditorASMDEF = File.Exists(EditorUtils.dotweenProEditorDir + _ProEditorASMDEFFile);
+            hasDOTweenTimelineASMDEF = File.Exists(EditorUtils.dotweenTimelineScriptsDir + _DOTweenTimelineASMDEFFile);
+            hasDOTweenTimelineEditorASMDEF = File.Exists(EditorUtils.dotweenTimelineEditorScriptsDir + _DOTweenTimelineEditorASMDEFFile);
         }
 
         public static void RefreshExistingASMDEFFiles()
         {
             Refresh();
 
-            if (!hasModulesASMDEF) {
-                if (hasProASMDEF) RemoveASMDEF(ASMDEFType.DOTweenPro);
-                if (hasProEditorASMDEF) RemoveASMDEF(ASMDEFType.DOTweenProEditor);
-                return;
-            }
+            // if (!hasModulesASMDEF) {
+            //     if (hasProASMDEF) RemoveASMDEF(ASMDEFType.DOTweenPro);
+            //     if (hasProEditorASMDEF) RemoveASMDEF(ASMDEFType.DOTweenProEditor);
+            //     if (hasDOTweenTimelineASMDEF) RemoveASMDEF(ASMDEFType.DOTweenTimeline);
+            //     if (hasDOTweenTimelineEditorASMDEF) RemoveASMDEF(ASMDEFType.DOTweenTimelineEditor);
+            //     return;
+            // }
 
-            if (!EditorUtils.hasPro) return;
-
-            if (!hasProASMDEF) CreateASMDEF(ASMDEFType.DOTweenPro);
-            if (!hasProEditorASMDEF) CreateASMDEF(ASMDEFType.DOTweenProEditor);
-
-            // Pro ASMDEF present: check that they contain correct elements
             DOTweenSettings src = DOTweenUtilityWindow.GetDOTweenSettings();
-            if (src == null) return;
-
-            ValidateProASMDEFReferences(src, ASMDEFType.DOTweenPro, EditorUtils.dotweenProDir + _ProASMDEFFile);
-            ValidateProASMDEFReferences(src, ASMDEFType.DOTweenProEditor, EditorUtils.dotweenProEditorDir + _ProEditorASMDEFFile);
+            if (src == null || !src.createASMDEF) return;
+            if (EditorUtils.hasPro) {
+                // if (!hasProASMDEF) CreateASMDEF(ASMDEFType.DOTweenPro);
+                // if (!hasProEditorASMDEF) CreateASMDEF(ASMDEFType.DOTweenProEditor);
+                // Pro ASMDEF present: check that they contain correct elements
+                ValidateProASMDEFReferences(src, ASMDEFType.DOTweenPro, EditorUtils.dotweenProDir + _ProASMDEFFile);
+                ValidateProASMDEFReferences(src, ASMDEFType.DOTweenProEditor, EditorUtils.dotweenProEditorDir + _ProEditorASMDEFFile);
+            }
+            if (EditorUtils.hasDOTweenTimeline) {
+                // if (!hasDOTweenTimelineASMDEF) CreateASMDEF(ASMDEFType.DOTweenTimeline);
+                // if (!hasDOTweenTimelineEditorASMDEF) CreateASMDEF(ASMDEFType.DOTweenTimelineEditor);
+                // Timeline ASMDEF present: check that they contain correct elements
+                ValidateDOTweenTimelineASMDEFReferences(src, ASMDEFType.DOTweenTimeline, EditorUtils.dotweenTimelineScriptsDir + _DOTweenTimelineASMDEFFile);
+                ValidateDOTweenTimelineASMDEFReferences(src, ASMDEFType.DOTweenTimelineEditor, EditorUtils.dotweenTimelineEditorScriptsDir + _DOTweenTimelineEditorASMDEFFile);
+            }
         }
 
         public static void CreateAllASMDEF()
         {
-            CreateASMDEF(ASMDEFType.Modules);
-            if (!EditorUtils.hasPro) return;
-            CreateASMDEF(ASMDEFType.DOTweenPro);
-            CreateASMDEF(ASMDEFType.DOTweenProEditor);
+            DOTweenSettings src = DOTweenUtilityWindow.GetDOTweenSettings();
+            src.createASMDEF = true;
+            EditorUtility.SetDirty(src);
+            if (!hasModulesASMDEF) CreateASMDEF(ASMDEFType.Modules);
+            if (EditorUtils.hasPro) {
+                if (!hasProASMDEF) CreateASMDEF(ASMDEFType.DOTweenPro);
+                if (!hasProEditorASMDEF) CreateASMDEF(ASMDEFType.DOTweenProEditor);
+            }
+            if (EditorUtils.hasDOTweenTimeline) {
+                if (!hasDOTweenTimelineASMDEF) CreateASMDEF(ASMDEFType.DOTweenTimeline);
+                if (!hasDOTweenTimelineEditorASMDEF) CreateASMDEF(ASMDEFType.DOTweenTimelineEditor);
+            }
         }
 
         public static void RemoveAllASMDEF()
         {
+            DOTweenSettings src = DOTweenUtilityWindow.GetDOTweenSettings();
+            src.createASMDEF = false;
+            EditorUtility.SetDirty(src);
             RemoveASMDEF(ASMDEFType.Modules);
-            RemoveASMDEF(ASMDEFType.DOTweenPro);
-            RemoveASMDEF(ASMDEFType.DOTweenProEditor);
+            if (hasProASMDEF) RemoveASMDEF(ASMDEFType.DOTweenPro);
+            if (hasProEditorASMDEF) RemoveASMDEF(ASMDEFType.DOTweenProEditor);
+            if (hasDOTweenTimelineASMDEF) RemoveASMDEF(ASMDEFType.DOTweenTimeline);
+            if (hasDOTweenTimelineEditorASMDEF) RemoveASMDEF(ASMDEFType.DOTweenTimelineEditor);
         }
 
         #endregion
@@ -99,6 +141,20 @@ namespace DG.DOTweenEditor
         #region Methods
 
         static void ValidateProASMDEFReferences(DOTweenSettings src, ASMDEFType asmdefType, string asmdefFilepath)
+        {
+            bool hasTextMeshProRef = false;
+            using (StreamReader sr = new StreamReader(asmdefFilepath)) {
+                string s;
+                while ((s = sr.ReadLine()) != null) {
+                    if (!s.Contains(_RefTextMeshPro)) continue;
+                    hasTextMeshProRef = true;
+                    break;
+                }
+            }
+            bool recreate = hasTextMeshProRef != src.modules.textMeshProEnabled;
+            if (recreate) CreateASMDEF(asmdefType, true);
+        }
+        static void ValidateDOTweenTimelineASMDEFReferences(DOTweenSettings src, ASMDEFType asmdefType, string asmdefFilepath)
         {
             bool hasTextMeshProRef = false;
             using (StreamReader sr = new StreamReader(asmdefFilepath)) {
@@ -125,6 +181,12 @@ namespace DG.DOTweenEditor
                 break;
             case ASMDEFType.DOTweenProEditor:
                 asmdefTypeStr = "DOTweenPro/Editor/" + _ProEditorASMDEFFile;
+                break;
+            case ASMDEFType.DOTweenTimeline:
+                asmdefTypeStr = "DOTweenTimeline/Scripts/" + _DOTweenTimelineASMDEFFile;
+                break;
+            case ASMDEFType.DOTweenTimelineEditor:
+                asmdefTypeStr = "DOTweenTimeline/Scripts/Editor/" + _DOTweenTimelineEditorASMDEFFile;
                 break;
             }
             Debug.Log(string.Format(
@@ -161,9 +223,21 @@ namespace DG.DOTweenEditor
                 asmdefFile = _ProEditorASMDEFFile;
                 asmdefDir = EditorUtils.dotweenProEditorDir;
                 break;
+            case ASMDEFType.DOTweenTimeline:
+                alreadyPresent = hasDOTweenTimelineASMDEF;
+                asmdefId = _DOTweenTimelineId;
+                asmdefFile = _DOTweenTimelineASMDEFFile;
+                asmdefDir = EditorUtils.dotweenTimelineScriptsDir;
+                break;
+            case ASMDEFType.DOTweenTimelineEditor:
+                alreadyPresent = hasDOTweenTimelineEditorASMDEF;
+                asmdefId = _DOTweenTimelineEditorId;
+                asmdefFile = _DOTweenTimelineEditorASMDEFFile;
+                asmdefDir = EditorUtils.dotweenTimelineEditorScriptsDir;
+                break;
             }
             if (alreadyPresent && !forceOverwrite) {
-                EditorUtility.DisplayDialog("Create ASMDEF", asmdefFile + " already exists", "Ok");
+                // EditorUtility.DisplayDialog("Create ASMDEF", asmdefFile + " already exists", "Ok");
                 return;
             }
             if (!Directory.Exists(asmdefDir)) {
@@ -175,6 +249,7 @@ namespace DG.DOTweenEditor
                 return;
             }
 
+            DOTweenSettings src;
             string asmdefFilePath = asmdefDir + asmdefFile;
             using (StreamWriter sw = File.CreateText(asmdefFilePath)) {
                 sw.WriteLine("{");
@@ -186,13 +261,34 @@ namespace DG.DOTweenEditor
                 case ASMDEFType.DOTweenProEditor:
                     sw.WriteLine("\t\"name\": \"{0}\",", asmdefId);
                     sw.WriteLine("\t\"references\": [");
-                    DOTweenSettings src = DOTweenUtilityWindow.GetDOTweenSettings();
+                    src = DOTweenUtilityWindow.GetDOTweenSettings();
                     if (src != null) {
                         if (src.modules.textMeshProEnabled) sw.WriteLine("\t\t\"{0}\",", _RefTextMeshPro);
                     }
                     if (type == ASMDEFType.DOTweenProEditor) {
                         sw.WriteLine("\t\t\"{0}\",", _ModulesId);
                         sw.WriteLine("\t\t\"{0}\"", _ProId);
+                        sw.WriteLine("\t],");
+                        sw.WriteLine("\t\"includePlatforms\": [");
+                        sw.WriteLine("\t\t\"Editor\"");
+                        sw.WriteLine("\t],");
+                        sw.WriteLine("\t\"autoReferenced\": false");
+                    } else {
+                        sw.WriteLine("\t\t\"{0}\"", _ModulesId);
+                        sw.WriteLine("\t]");
+                    }
+                    break;
+                case ASMDEFType.DOTweenTimeline:
+                case ASMDEFType.DOTweenTimelineEditor:
+                    sw.WriteLine("\t\"name\": \"{0}\",", asmdefId);
+                    sw.WriteLine("\t\"references\": [");
+                    src = DOTweenUtilityWindow.GetDOTweenSettings();
+                    if (src != null) {
+                        if (src.modules.textMeshProEnabled) sw.WriteLine("\t\t\"{0}\",", _RefTextMeshPro);
+                    }
+                    if (type == ASMDEFType.DOTweenTimelineEditor) {
+                        sw.WriteLine("\t\t\"{0}\",", _ModulesId);
+                        sw.WriteLine("\t\t\"{0}\"", _DOTweenTimelineId);
                         sw.WriteLine("\t],");
                         sw.WriteLine("\t\"includePlatforms\": [");
                         sw.WriteLine("\t\t\"Editor\"");
@@ -233,11 +329,21 @@ namespace DG.DOTweenEditor
                 asmdefFile = _ProEditorASMDEFFile;
                 asmdefDir = EditorUtils.dotweenProEditorDir;
                 break;
+            case ASMDEFType.DOTweenTimeline:
+                alreadyPresent = hasDOTweenTimelineASMDEF;
+                asmdefFile = _DOTweenTimelineASMDEFFile;
+                asmdefDir = EditorUtils.dotweenTimelineScriptsDir;
+                break;
+            case ASMDEFType.DOTweenTimelineEditor:
+                alreadyPresent = hasDOTweenTimelineEditorASMDEF;
+                asmdefFile = _DOTweenTimelineEditorASMDEFFile;
+                asmdefDir = EditorUtils.dotweenTimelineEditorScriptsDir;
+                break;
             }
 
             Refresh();
             if (!alreadyPresent) {
-                EditorUtility.DisplayDialog("Remove ASMDEF", asmdefFile + " not present", "Ok");
+                // EditorUtility.DisplayDialog("Remove ASMDEF", asmdefFile + " not present", "Ok");
                 return;
             }
 
